@@ -1,6 +1,6 @@
 # my-swift-redux-improvement
 
-### Simplifed, Experiment Version
+### Simplifed, Experiment Version 1
 
 ```swift
 //
@@ -107,7 +107,7 @@ func userMiddleware() -> Middleware {
 }
 
 ```
-### Simplifed, Experiment Version
+### Simplifed, Experiment Version 2
 ```swift
 //
 //  Store.swift
