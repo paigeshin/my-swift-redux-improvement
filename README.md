@@ -105,3 +105,84 @@ func userMiddleware() -> Middleware {
 }
 
 ```
+### Simplifed, Experiment Version
+```swift
+//
+//  Store.swift
+//  myredux
+//
+//  Created by paige shin on 2022/12/10.
+//
+
+import Combine
+import Foundation
+
+enum AppAction {
+    case user(UserAction)
+}
+
+enum UserAction {
+    case set(String)
+    case setError(Error)
+    case async(AsyncAction)
+    
+    enum AsyncAction {
+        case fetch
+        case update(String)
+    }
+    
+}
+
+struct UserState {
+    var user: String = "Not Fetched Yet"
+    var error: UserError?
+}
+
+enum UserError: Error {
+    case updateError
+}
+
+class Store: ObservableObject {
+    
+    @Published var userState: UserState = UserState()
+    
+    func dispatch(action: AppAction) {
+        DispatchQueue.main.async {
+            switch action {
+            case .user(let userAction):
+                userReducer(state: &self.userState, action: userAction)
+                switch userAction {
+                case .async(let async):
+                    userMiddleware()(self.userState, async, self.dispatch(action:))
+                default: break
+                }
+            }
+        }
+    }
+    
+}
+
+func userReducer(state: inout UserState, action: UserAction) {
+    switch action {
+    case .set(let user):
+        state.user = user
+    default: break
+    }
+}
+
+func userMiddleware() -> (UserState, UserAction.AsyncAction, @escaping(AppAction) -> Void) -> Void {
+    return { state, action, dispatch in
+        switch action {
+        case .fetch:
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                print("Fetched")
+                dispatch(.user(.set("Fetched")))
+            }
+        case .update(let user):
+            print("update user: \(user)")
+            dispatch(.user(.setError(UserError.updateError)))
+        }
+    }
+}
+
+```
