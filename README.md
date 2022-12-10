@@ -1,5 +1,7 @@
 # my-swift-redux-improvement
 
+### Simplifed, Experiment Version
+
 ```swift
 //
 //  Store.swift
