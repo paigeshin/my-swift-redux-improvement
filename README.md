@@ -321,8 +321,6 @@ struct AppState: ReduxState {
     var authState: AuthState = AuthState()
 }
 
-import Foundation
-
 enum AppAction: ReduxAction {
     case navigate(Route)
 }
