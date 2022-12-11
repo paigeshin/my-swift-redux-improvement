@@ -265,3 +265,87 @@ func logMiddleware() -> Middleware {
 
 
 ```
+
+### Implemented in real project 
+
+```swift 
+import Foundation
+
+typealias Dispatcher<Action: ReduxAction> = (Action) -> Void
+typealias Reducer<State: ReduxState, Action: ReduxAction> = (_ state: State, _ action: Action) -> State
+typealias Middleware<State: ReduxState, Action: ReduxAction> = (State, Action, @escaping Dispatcher<Action>) -> Void
+
+protocol ReduxState: Equatable, Hashable { }
+protocol ReduxAction { }
+protocol ReduxEnvironment { }
+
+final class Store<State: ReduxState, Action: ReduxAction>: ObservableObject {
+
+    @Published var state: State
+    private let reducer: Reducer<State, Action>
+    private var middlewares: [Middleware<State, Action>]
+
+    init(state: State,
+         reducer: @escaping Reducer<State, Action>,
+         middlewares: [Middleware<State, Action>] = []) {
+        self.reducer = reducer
+        self.state = state
+        self.middlewares = middlewares
+    }
+
+    func dispatch(action: Action) {
+        DispatchQueue.main.async { [weak self] in
+            guard let strongSelf = self else { return }
+            strongSelf.state = strongSelf.reducer(strongSelf.state, action)
+        }
+
+        // run all middlewares
+        self.middlewares.forEach { middleware in
+            middleware(state, action, dispatch)
+        }
+        
+    }
+    
+    func inject(middlewares: [Middleware<State, Action>]) {
+        self.middlewares = middlewares
+    }
+
+}
+
+enum Route {
+    case splash
+}
+
+struct AppState: ReduxState {
+    var route: Route = .splash
+    var authState: AuthState = AuthState()
+}
+
+import Foundation
+
+enum AppAction: ReduxAction {
+    case navigate(Route)
+}
+
+func appReducer(_ state: AppState, _ action: ReduxAction) -> AppState {
+    var state: AppState = state
+    
+    return state
+}
+
+func logMiddleware() -> Middleware<AppState, AppAction> {
+    return { state, action, dispatch in
+        Log.info("⭐️ACTION RECEIVED⭐️: \(action)")
+    }
+}
+
+enum AuthAction: ReduxAction {
+    case requestAppleSignIn(ASAuthorizationAppleIDRequest)
+    
+    enum Async {
+        case handleAignSignInRequestResult(Result<ASAuthorization, Error>)
+    }
+    
+}
+
+``
