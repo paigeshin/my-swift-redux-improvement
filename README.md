@@ -188,3 +188,80 @@ func userMiddleware() -> (UserState, UserAction.AsyncAction, @escaping(AppAction
 }
 
 ```
+
+### Simplifed, Experiment Version 3
+
+```swift
+import Foundation
+
+typealias Dispatcher = (ReduxAction) -> Void
+typealias Reducer = (inout ReduxState, ReduxAction) -> Void
+typealias Middleware = (ReduxState, ReduxAction, @escaping Dispatcher) -> Void
+
+protocol ReduxState { }
+protocol ReduxAction { }
+protocol ReduxEnvironment { }
+
+final class Store: ObservableObject {
+
+    @Published private(set) var state: ReduxState
+    private let reducer: Reducer
+    private var middlewares: [Middleware]
+
+    init(reducer: @escaping Reducer,
+         state: ReduxState,
+         middlewares: [Middleware] = []) {
+        self.reducer = reducer
+        self.state = state
+        self.middlewares = middlewares
+    }
+
+    func dispatch(action: ReduxAction) {
+        DispatchQueue.main.async { [weak self] in
+            guard let strongSelf = self else { return }
+            strongSelf.reducer(&strongSelf.state, action)
+        }
+
+        // run all middlewares
+        self.middlewares.forEach { [weak self] middleware in
+            guard let strongSelf = self else { return }
+            middleware(strongSelf.state, action, strongSelf.dispatch)
+        }
+    }
+    
+    func injectMiddlewars(_ middlewares: [Middleware]) {
+        self.middlewares = middlewares
+    }
+
+}
+
+func appReducer(state: inout ReduxState, action: ReduxAction) {
+//    switch action {
+//    case .user(let userAction):
+//        userReducer(state: &state.userState, action: userAction)
+//    }
+}
+
+enum AppAction: ReduxAction {
+    case user(action: UserAction)
+}
+
+enum UserAction: ReduxAction {
+    case fetch
+    case fetchComplete(users: [NetworkUser])
+    case fetchError(error: Error?)
+}
+
+struct AppState: ReduxState {
+    var routeState: RouteState = RouteState()
+    var authState: AuthState = AuthState()
+}
+
+func logMiddleware() -> Middleware {
+    return { state, action, dispatch in
+        Log.info("⭐️ACTION RECEIVED⭐️: \(action)")
+    }
+}
+
+
+```
